@@ -3232,7 +3232,7 @@ do
 		extern int stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const char *ibuffer, int ilen);
 	]]
 	
-	if ffi.os == "Windows" then
+	if (ffi.os == "Windows") then
 		gl = ffi.load("opengl32")
 		glu = ffi.load("glu32")
 	else

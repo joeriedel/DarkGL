@@ -1,4 +1,4 @@
--- CStdLib imports
+-- Byte stream helpers
 --[[
 The MIT License (MIT)
 
@@ -24,20 +24,56 @@ THE SOFTWARE.
 ]]
 
 local require = require
-module("CStdLib")
+local assert = assert
 
+module("ByteStream")
 local ffi = require("ffi")
-ffi.cdef[[
-	int printf(const char *fmt, ...);
-	int exit(int);
-	void *fopen(const char *filename, const char *mode);
-	int fclose(void*);
-	size_t fwrite(const void *ptr, size_t size, size_t count, void *fp);
-	size_t fread(void *ptr, size_t size, size_t count, void *fp);
-	long int ftell(void *fp);
-	int fseek(void *fp, long int offset, int origin);
-]]
+local cstdlib = require("CStdLib")
+local bit = require("bit")
 
-SEEK_SET = 0
-SEEK_CUR = 1
-SEEK_END = 2
+local uint8Type = ffi.typeof("uint8_t[?]")
+
+function New(data, size)
+	assert(ffi.istype(data, uint8Type))
+	
+	local stream = {
+		ofs = 0,
+		data = data,
+		size = size,
+		Read = function(self, size)
+			assert(self.ofs+size <= self.size)
+			local buf = ffi.new(uint8Type, size)
+			ffi.copy(buf, self.data+self.ofs, size)
+			self.ofs = self.ofs + size
+			return buf
+		end,
+		Seek = function(self, ofs, origin)
+			if (origin == nil) then
+				origin = cstdlib.SEEK_CUR
+			end
+			
+			if (origin == cstdlib.SEEK_CUR) then
+				ofs = self.ofs + ofs
+			elseif (origin == cstdlib.SEEK_END) then
+				ofs = self.size + ofs
+			end
+			
+			assert(ofs < self.size)
+			self.ofs = ofs
+			return ofs
+		end,
+		ReadInt = function(self, numBytes)
+			local buf = self:Read(numBytes)
+			local x = 0
+			for i=0,(numBytes-1) do
+				x = bit.bor(x, bit.lshift(buf[i], i*8))
+			end
+			return x
+		end,
+		EOF = function(self)
+			return self.ofs == self.size
+		end
+	}
+	
+	return stream
+end

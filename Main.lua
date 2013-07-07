@@ -27,11 +27,23 @@ require("CStdLib") -- load ffi.C with stdlib
 
 local ffi = require("ffi")
 local ljgl = require("lujgl")
-local log = require("Log")
 local gl = ljgl.gl
 local glconst = ljgl.glconst
+local log = require("Log")
+local gob = require("GOB")
 
 log.Print("DarkGL starting...\n")
+gob.Open("DARK.GOB")
+gob.Open("SOUNDS.GOB")
+
+for k,v in pairs(gob.files) do
+
+	if (v.type == "VOC") then
+		gob.Load(v.name)
+	end
+
+end
+
 ljgl.initialize("DarkGL", 1280, 720, {})
 
 function Render()

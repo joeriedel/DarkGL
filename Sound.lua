@@ -1,4 +1,4 @@
--- CStdLib imports
+-- Sound support
 --[[
 The MIT License (MIT)
 
@@ -24,20 +24,9 @@ THE SOFTWARE.
 ]]
 
 local require = require
-module("CStdLib")
+module("Sound")
 
 local ffi = require("ffi")
-ffi.cdef[[
-	int printf(const char *fmt, ...);
-	int exit(int);
-	void *fopen(const char *filename, const char *mode);
-	int fclose(void*);
-	size_t fwrite(const void *ptr, size_t size, size_t count, void *fp);
-	size_t fread(void *ptr, size_t size, size_t count, void *fp);
-	long int ftell(void *fp);
-	int fseek(void *fp, long int offset, int origin);
-]]
+local openal = require("OpenAL")
 
-SEEK_SET = 0
-SEEK_CUR = 1
-SEEK_END = 2
+

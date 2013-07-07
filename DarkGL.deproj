@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+  <file>
+    <filename>CStdLib.lua</filename>
+  </file>
+  <file>
+    <filename>GLState.lua</filename>
+  </file>
+  <file>
+    <filename>GOB.lua</filename>
+  </file>
+  <file>
+    <filename>Library.lua</filename>
+  </file>
+  <file>
+    <filename>Log.lua</filename>
+  </file>
+  <file>
+    <filename>Main.lua</filename>
+  </file>
+  <file>
+    <filename>lujgl.lua</filename>
+  </file>
+</project>
