@@ -47,17 +47,20 @@ ffi.cdef[[
 	} __attribute((packed));
 ]]
 
-gobs = {}
-files = {}
+local self = {
+	gobs = {},
+	files = {},
+	cache = {}
+}
 
-function FileType(name)
+function self.FileType(name)
 	name = name:upper()
 	local ext = name:match("%.%w+$")
 	ext = ext:sub(2)
 	return ext
 end
 
-function Open(name)
+function self.Open(name)
 	local fp = ffi.C.fopen(name, "rb")
 	if (fp == nil) then
 		log.FatalError("Unable to open %s.\n", name)
@@ -109,7 +112,7 @@ function Open(name)
 		fp = fp
 	}
 	
-	gobs[name] = gob
+	self.gobs[name] = gob
 	
 	for i=0,(numFiles-1) do
 		local gobFile = gobDir[i]
@@ -119,10 +122,10 @@ function Open(name)
 				ofs = gobFile.fileOfs,
 				len = gobFile.fileLen,
 				name = filename,
-				type = FileType(filename),
+				type = self.FileType(filename),
 				gob = gob
 			}
-			files[file.name] = file
+			self.files[file.name] = file
 			log.Debug("%s: %s\n", name, file.name)
 		end
 	end
@@ -130,31 +133,43 @@ function Open(name)
 	return true
 end
 
-local uint8Type = ffi.typeof("uint8_t[?]")
+local uint8_t = ffi.typeof("uint8_t[?]")
 
-function Load(name)
+function self.Load(name, ...)
 	name = name:upper()
 	
-	local gob = files[name]
-	if (gob == nil) then
+	local cache = self.cache[name]
+	if (cache) then
+		return cache:New(...)
+	end
+	
+	local file = self.files[name]
+	if (file == nil) then
 		log.FatalError("File '%s' was not found.", name)
 	end
 	
-	local buf = ffi.new(uint8Type, gob.len)
+	local buf = uint8_t(file.len)
 	
-	if (ffi.C.fseek(gob.gob.fp, gob.ofs, cstdlib.SEEK_SET) ~= 0) then
+	if (ffi.C.fseek(file.gob.fp, file.ofs, cstdlib.SEEK_SET) ~= 0) then
 		log.FatalError("Could not seek to '%s'.", name)
 	end
 	
-	if (ffi.C.fread(buf, 1, gob.len, gob.gob.fp) ~= gob.len) then
+	if (ffi.C.fread(buf, 1, file.len, file.gob.fp) ~= file.len) then
 		log.FatalError("Could not read '%s'.", name)
 	end
 	
-	local stream = byteStream.New(buf, gob.len)
+	local stream = byteStream.New(buf, file.len)
 	
-	if (gob.type == "VOC") then
-		return voc.Load(name, stream)
+	if (file.type == "VOC") then
+		cache = voc.Load(name, stream)
 	end
 
-	log.FatalError("'%s' has an unrecognized type.")
+	if (cache) then
+		self.cache[name] = cache
+		return cache:New(...)
+	else
+		log.FatalError("'%s' has an unrecognized type.")
+	end
 end
+
+return self

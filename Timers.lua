@@ -1,4 +1,4 @@
--- Byte stream helpers
+-- Timers
 --[[
 The MIT License (MIT)
 
@@ -24,68 +24,66 @@ THE SOFTWARE.
 ]]
 
 local require = require
-local assert = assert
+module("Timers")
 
-module("ByteStream")
-local ffi = require("ffi")
-local cstdlib = require("CStdLib")
-local bit = require("bit")
+local library = require("Library")
 
-local uint8_t = ffi.typeof("uint8_t[?]")
+local timers = library.LL_New()
+local tick = -1
 
 local self = {}
 
-function StreamRead(self, size)
-	assert(self.ofs+size <= self.size)
-	local buf = uint8_t(size)
-	ffi.copy(buf, self.data+self.ofs, size)
-	self.ofs = self.ofs + size
-	return buf
-end
-
-function StreamSeek(self, ofs, origin)
-	if (origin == nil) then
-		origin = cstdlib.SEEK_CUR
-	end
-	
-	if (origin == cstdlib.SEEK_CUR) then
-		ofs = self.ofs + ofs
-	elseif (origin == cstdlib.SEEK_END) then
-		ofs = self.size + ofs
-	end
-	
-	assert(ofs < self.size)
-	self.ofs = ofs
-	return ofs
-end
-
-function StreamReadInt(self, numBytes)
-	local buf = self:Read(numBytes)
-	local x = 0
-	for i=0,(numBytes-1) do
-		x = bit.bor(x, bit.lshift(buf[i], i*8))
-	end
-	return x
-end
-
-function StreamEOF(self)
-	return self.ofs == self.size
-end
-
-function self.New(data, size)
-	assert(ffi.istype(data, uint8_t))
-	
-	local stream = {
-		ofs = 0,
-		data = data,
-		size = size,
-		Read = StreamRead,
-		Seek = StreamSeek,
-		ReadInt = StreamReadInt,
-		EOF = StreamEOF
+function self.Add(func, time, repeats)
+	local timer = {
+		func = func,
+		time = 0,
+		period = time,
+		repeats = repeats,
+		tick = 0
 	}
+	if (tick < 0) then
+		timer.tick = -99
+	end
 	
-	return stream
+	return library.LL_Append(timers, timer)
+end
+
+function self.Remove(timer)
+	local list = library.LL_List(timer)
+	assert(list)
+	library.LL_Remove(list, timer)
+end
+
+function self.Tick(dt)
+	tick = tick + 1
+	local item = library.LL_Head(timers)
+	
+	while (item) do
+		local next = library.LL_Next(item)
+		
+		if (item.tick ~= tick) then
+			-- don't tick new timers added in timer refresh
+			if (item.tick ~= 0) then
+				item.time = item.time + dt
+				if (item.time >= item.period) then
+					item.func(item.time, dt)
+					item.time = 0
+					if (not item.repeats) then
+						library.LL_Remove(timers, item)
+					end
+				end
+			end
+			
+			item.tick = tick
+		end
+		
+		-- next timer was removed, breaking our ability to move forward
+		if (next and (library.LL_List(next) == nil)) then
+			item = library.LL_Head(timers) -- start from the top again
+		else
+			item = next
+		end
+	end
 end
 
 return self

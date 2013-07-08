@@ -36,6 +36,8 @@ ffi.cdef[[
 	size_t fread(void *ptr, size_t size, size_t count, void *fp);
 	long int ftell(void *fp);
 	int fseek(void *fp, long int offset, int origin);
+	void *malloc(size_t size);
+	void free(void*);
 ]]
 
 SEEK_SET = 0

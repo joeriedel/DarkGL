@@ -1,4 +1,4 @@
--- Log.lua
+-- 2D / 3D Vector Library
 --[[
 The MIT License (MIT)
 
@@ -23,60 +23,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ]]
 
+local math = math
+local require = require
+
+module("VecLib")
+
 local ffi = require("ffi")
-local msgBox = nil
+local vec = ffi.typeof("float[?]")
 
-if (ffi.os == "Windows") then
-	ffi.cdef[[
-		int MessageBoxA(void*, const char*, const char*, int type);
-	]]
-	msgBox = function(str)
-		ffi.C.MessageBoxA(nil, str, "DarkGL Fatal Error", 0)
-	end
+local self = {}
+
+function self.Vec3New(...)
+	return vec(3, ...)
 end
 
-module("Log")
-
-local self = {
-	kLevel_Debug = 1,
-	kLevel_Normal = 2,
-	kLevel_Warning = 3,
-	kLevel_Error = 4
-}
-
-self.Level = self.kLevel_Debug
-
-function self.Debug(str, ...)
-	if (self.Level <= self.kLevel_Debug) then
-		ffi.C.printf("DEBUG: %s", str:format(...))
-	end
+function self.Vec3ExactlyEqual(a, b)
+	return (a[0] == b[0]) and (a[1] == b[1]) and (a[2] == b[2])
 end
 
-function self.Print(str, ...)
-	if (self.Level <= self.kLevel_Normal) then
-		ffi.C.printf("%s", str:format(...))
-	end
-end
-
-function self.Warning(str, ...)
-	if (self.Level <= self.kLevel_Warning) then
-		ffi.C.printf("WARNING: %s", str:format(...))
-	end
-end
-
-function self.Error(str, ...)
-	if (self.Level <= self.kLevel_Error) then
-		ffi.C.printf("ERROR: %s", str:format(...))
-	end
-end
-
-function self.FatalError(str, ...)
-	str = str:format(...)
-	ffi.C.printf("ERROR: %s", str)
-	if (msgBox) then
-		msgBox(str)
-	end
-	ffi.C.exit(-1)
+function self.Vec3Copy(src, dst)
+	ffi.cpy(src, dst, ffi.sizeof(vec)*3)
 end
 
 return self

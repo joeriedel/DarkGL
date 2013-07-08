@@ -32,10 +32,13 @@ module("VOC")
 local ffi = require("ffi")
 local log = require("Log")
 local cstdlib = require("CStdLib")
+local sound = require("Sound")
 
 local uint8Type = ffi.typeof("uint8_t[?]")
 
-local DecodeBlock = function(pcm, encoding, size)
+local self = {}
+
+function DecodeBlock(pcm, encoding, size)
 
 	if (encoding == 0x00) then -- 8 bit PCM
 		return pcm,size
@@ -65,7 +68,7 @@ local DecodeBlock = function(pcm, encoding, size)
 	
 end
 
-local MergeBlocks = function(src, srcSize, dst, dstSize)
+function MergeBlocks(src, srcSize, dst, dstSize)
 
 	local new = ffi.new(uint8Type, srcSize+dstSize)
 	ffi.copy(new, src, srcSize)
@@ -74,7 +77,7 @@ local MergeBlocks = function(src, srcSize, dst, dstSize)
 
 end
 
-local MergeSilence = function(src, srcSize, silenceSize)
+function MergeSilence(src, srcSize, silenceSize)
 
 	local new = ffi.new(uint8Type, srcSize+silenceSize)
 	ffi.copy(new, src, srcSize)
@@ -86,7 +89,7 @@ local MergeSilence = function(src, srcSize, silenceSize)
 	return new,srcSize+silenceSize
 end
 
-local CalcFreq = function (freq)
+function CalcFreq(freq)
 	freq = 1000000/(256-freq)
 	if (freq > 44000) then
 		freq = 48000
@@ -104,9 +107,9 @@ local CalcFreq = function (freq)
 	return freq
 end
 
-function Load(name, stream)
+function self.Load(name, stream)
 
-	log.Debug("VOCLOAD %s\n", name)
+	log.Debug("VOC.LOAD %s\n", name)
 		
 	-- verify it's a VOC file
 	local ident = ffi.string(stream:Read(19), 19)
@@ -122,6 +125,7 @@ function Load(name, stream)
 	stream:Seek(headerSize, cstdlib.SEEK_SET)
 	
 	local voc = { blocks = {} }
+	local reps = 1
 	
 	while (true) do
 	
@@ -137,7 +141,6 @@ function Load(name, stream)
 		
 		local blockSize = stream:ReadInt(3)
 		local encoding = nil
-		local rep = 0
 		local block = nil
 		
 		if (blockType == 0x01) then -- sound header + data
@@ -146,7 +149,9 @@ function Load(name, stream)
 			local pcm = stream:Read(blockSize-2)
 			block = {
 				freq = CalcFreq(freq),
-				rep = rep
+				reps = reps,
+				bits = 8,
+				channels = 1
 			}
 			block.pcm, block.size = DecodeBlock(pcm, encoding, blockSize-2)
 			table.insert(voc.blocks, block)
@@ -166,13 +171,24 @@ function Load(name, stream)
 		elseif (blockType == 0x05) then -- text
 			stream:Seek(blockSize)
 		elseif (blockType == 0x06) then -- repeat
-			rep = stream:ReadInt(2)
+			if (#voc.blocks > 0) then
+				local b = 0
+			end
+			reps = stream:ReadInt(2) + 1
 		elseif (blockType == 0x07) then -- repeat end
-			rep = 0
+			reps = 1
 		else
 			stream:Seek(blockSize)
 		end
 	
 	end
 	
+	return sound.Create(voc)
 end
+
+-- follow this up with collectgarbage() between levels
+function PurgeCache()
+	self.cache = {}
+end
+
+return self

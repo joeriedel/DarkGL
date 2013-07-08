@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <project>
   <file>
+    <filename>ByteStream.lua</filename>
+  </file>
+  <file>
     <filename>CStdLib.lua</filename>
   </file>
   <file>
@@ -17,6 +20,21 @@
   </file>
   <file>
     <filename>Main.lua</filename>
+  </file>
+  <file>
+    <filename>OpenAL.lua</filename>
+  </file>
+  <file>
+    <filename>Sound.lua</filename>
+  </file>
+  <file>
+    <filename>Timers.lua</filename>
+  </file>
+  <file>
+    <filename>VOC.lua</filename>
+  </file>
+  <file>
+    <filename>VecLib.lua</filename>
   </file>
   <file>
     <filename>lujgl.lua</filename>

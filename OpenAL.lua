@@ -1,4 +1,4 @@
--- LuaJIT FFI OpenAL bindings
+-- LuaJIT FFI OpenALSoft bindings
 --[[
 The MIT License (MIT)
 
@@ -30,6 +30,92 @@ module("LuaJIT")
 local ffi = require("ffi")
 
 ffi.cdef[[
+
+/** Opaque device handle */
+typedef struct ALCdevice_struct ALCdevice;
+/** Opaque context handle */
+typedef struct ALCcontext_struct ALCcontext;
+
+/** 8-bit boolean */
+typedef char ALCboolean;
+
+/** character */
+typedef char ALCchar;
+
+/** signed 8-bit 2's complement integer */
+typedef signed char ALCbyte;
+
+/** unsigned 8-bit integer */
+typedef unsigned char ALCubyte;
+
+/** signed 16-bit 2's complement integer */
+typedef short ALCshort;
+
+/** unsigned 16-bit integer */
+typedef unsigned short ALCushort;
+
+/** signed 32-bit 2's complement integer */
+typedef int ALCint;
+
+/** unsigned 32-bit integer */
+typedef unsigned int ALCuint;
+
+/** non-negative 32-bit binary integer size */
+typedef int ALCsizei;
+
+/** enumerated 32-bit value */
+typedef int ALCenum;
+
+/** 32-bit IEEE754 floating-point */
+typedef float ALCfloat;
+
+/** 64-bit IEEE754 floating-point */
+typedef double ALCdouble;
+
+/** void type (for opaque pointers only) */
+typedef void ALCvoid;
+
+/** Context management. */
+ALCcontext* alcCreateContext(ALCdevice *device, const ALCint* attrlist);
+ALCboolean  alcMakeContextCurrent(ALCcontext *context);
+void        alcProcessContext(ALCcontext *context);
+void        alcSuspendContext(ALCcontext *context);
+void        alcDestroyContext(ALCcontext *context);
+ALCcontext* alcGetCurrentContext(void);
+ALCdevice*  alcGetContextsDevice(ALCcontext *context);
+
+/** Device management. */
+ALCdevice* alcOpenDevice(const ALCchar *devicename);
+ALCboolean alcCloseDevice(ALCdevice *device);
+
+/**
+ * Error support.
+ *
+ * Obtain the most recent Device error.
+ */
+ALCenum alcGetError(ALCdevice *device);
+
+/**
+ * Extension support.
+ *
+ * Query for the presence of an extension, and obtain any appropriate
+ * function pointers and enum values.
+ */
+ALCboolean alcIsExtensionPresent(ALCdevice *device, const ALCchar *extname);
+void*      alcGetProcAddress(ALCdevice *device, const ALCchar *funcname);
+ALCenum    alcGetEnumValue(ALCdevice *device, const ALCchar *enumname);
+
+/** Query function. */
+const ALCchar* alcGetString(ALCdevice *device, ALCenum param);
+void           alcGetIntegerv(ALCdevice *device, ALCenum param, ALCsizei size, ALCint *values);
+
+/** Capture function. */
+ALCdevice* alcCaptureOpenDevice(const ALCchar *devicename, ALCuint frequency, ALCenum format, ALCsizei buffersize);
+ALCboolean alcCaptureCloseDevice(ALCdevice *device);
+void       alcCaptureStart(ALCdevice *device);
+void       alcCaptureStop(ALCdevice *device);
+void       alcCaptureSamples(ALCdevice *device, ALCvoid *buffer, ALCsizei samples);
+
 /** 8-bit boolean */
 typedef char ALboolean;
 
@@ -222,6 +308,35 @@ void alGetBufferiv(ALuint buffer, ALenum param, ALint *values);
 local openal = ffi.load("OpenAL32")
 
 local consts = {
+['ALC_INVALID']                           = 0,
+['ALC_VERSION_0_1']                       = 1,
+['ALC_FALSE']                             = 0,
+['ALC_TRUE']                              = 1,
+['ALC_FREQUENCY']                         = 0x1007,
+['ALC_REFRESH']                           = 0x1008,
+['ALC_SYNC']                              = 0x1009,
+['ALC_MONO_SOURCES']                      = 0x1010,
+['ALC_STEREO_SOURCES']                    = 0x1011,
+['ALC_NO_ERROR']                          = 0,
+['ALC_INVALID_DEVICE']                    = 0xA001,
+['ALC_INVALID_CONTEXT']                   = 0xA002,
+['ALC_INVALID_ENUM']                      = 0xA003,
+['ALC_INVALID_VALUE']                     = 0xA004,
+['ALC_OUT_OF_MEMORY']                     = 0xA005,
+['ALC_MAJOR_VERSION']                     = 0x1000,
+['ALC_MINOR_VERSION']                     = 0x1001,
+['ALC_ATTRIBUTES_SIZE']                   = 0x1002,
+['ALC_ALL_ATTRIBUTES']                    = 0x1003,
+['ALC_DEFAULT_DEVICE_SPECIFIER']          = 0x1004,
+['ALC_DEVICE_SPECIFIER']                  = 0x1005,
+['ALC_EXTENSIONS']                        = 0x1006,
+['ALC_EXT_CAPTURE']                       = 1,
+['ALC_CAPTURE_DEVICE_SPECIFIER']          = 0x310,
+['ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER']  = 0x311,
+['ALC_CAPTURE_SAMPLES']                   = 0x312,
+['ALC_ENUMERATE_ALL_EXT']                 = 1,
+['ALC_DEFAULT_ALL_DEVICES_SPECIFIER']     = 0x1012,
+['ALC_ALL_DEVICES_SPECIFIER']             = 0x1013,
 ['AL_NONE']                               = 0,
 ['AL_FALSE']                              = 0,
 ['AL_TRUE']                               = 1,
@@ -289,7 +404,40 @@ local consts = {
 ['AL_EXPONENT_DISTANCE_CLAMPED']          = 0xD006
 }
 
-return {
-	C = openal,
-	consts = consts
-}
+local self = {}
+
+local Shutdown = function()
+	if (self.ctx) then
+		openal.alcDestroyContext(ffi.gc(self.ctx, nil))
+		self.ctx = nil
+	end
+	if (self.dev) then
+		openal.alcCloseDevice(ffi.gc(self.dev, nil))
+		self.dev = nil
+	end
+end
+
+local Initialize = function(driver, attrs)
+
+	self.dev = ffi.gc(openal.alcOpenDevice(driver), openal.alcCloseDevice)
+	self.ctx = nil
+	
+	if (self.dev) then
+		self.ctx = ffi.gc(openal.alcCreateContext(self.dev, attrs), openal.alcDestroyContext)
+		if (self.ctx) then
+			openal.alcMakeContextCurrent(self.ctx)
+		end
+	end
+	
+	if (not (self.dev and self.ctx)) then
+		Shutdown()
+		log.Warning("Audio initialization failed.\n")
+	end
+end
+
+self.C = openal
+self.consts = consts
+self.Initialize = Initialize
+self.Shutdown = Shutdown
+
+return self

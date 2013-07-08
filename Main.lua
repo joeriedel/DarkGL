@@ -31,18 +31,26 @@ local gl = ljgl.gl
 local glconst = ljgl.glconst
 local log = require("Log")
 local gob = require("GOB")
+local timers = require("Timers")
+local openal = require("OpenAL")
 
 log.Print("DarkGL starting...\n")
-gob.Open("DARK.GOB")
+
+openal.Initialize()
+
+--gob.Open("DARK.GOB")
 gob.Open("SOUNDS.GOB")
 
-for k,v in pairs(gob.files) do
+--[[for k,v in pairs(gob.files) do
 
 	if (v.type == "VOC") then
 		gob.Load(v.name)
 	end
 
-end
+end]]--
+
+local sound = gob.Load("WELD-2.VOC")
+sound:Play()
 
 ljgl.initialize("DarkGL", 1280, 720, {})
 
@@ -52,8 +60,20 @@ end
 
 ljgl.setRenderCallback(Render)
 
+local lastTickTime = nil
 function TickState()
-
+	if (lastTickTime == nil) then
+		lastTickTime = ljgl.getTime()
+	end
+	
+	local time = ljgl.getTime()
+	local dt = time - lastTickTime
+	lastTickTime = time
+	
+	if (dt > 0) then
+		timers.Tick(dt)
+	end
+	
 end
 ljgl.setIdleCallback(TickState)
 
