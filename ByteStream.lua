@@ -43,6 +43,18 @@ function StreamRead(self, size)
 	return buf
 end
 
+function StreamReadType(self, ctype, num)
+	if (num == nil) then
+		num = 1
+	end
+	local size = ffi.sizeof(ctype, num)
+	assert(self.ofs+size <= self.size)
+	local cdata = ctype(num)
+	ffi.copy(cdata, self.data+self.ofs, size)
+	self.ofs = self.ofs + size
+	return cdata
+end
+
 function StreamSeek(self, ofs, origin)
 	if (origin == nil) then
 		origin = cstdlib.SEEK_CUR
@@ -68,6 +80,15 @@ function StreamReadInt(self, numBytes)
 	return x
 end
 
+function StreamReadBigInt(self, numBytes)
+	local buf = self:Read(numBytes)
+	local x = 0
+	for i=0,(numBytes-1) do
+		x = bit.bor(x, bit.lshift(buf[i], (numBytes-i-1)*8))
+	end
+	return x
+end
+
 function StreamEOF(self)
 	return self.ofs == self.size
 end
@@ -80,12 +101,32 @@ function self.New(data, size)
 		data = data,
 		size = size,
 		Read = StreamRead,
+		ffiRead = StreamReadType,
 		Seek = StreamSeek,
 		ReadInt = StreamReadInt,
+		ReadBigInt = StreamReadBigInt,
 		EOF = StreamEOF
 	}
 	
 	return stream
+end
+
+function self.ByteSwap(val, size)
+	local x = 0
+		
+	for i=1,size do
+		local s = size-i
+		local m = bit.lshift(0xff, s*8)
+		local z = bit.band(val, m)
+		s = i-s-1
+		if (s > 0) then
+			x = bit.bor(x, bit.lshift(z, s*8))
+		else
+			x = bit.bor(x, bit.rshift(z, -s*8))
+		end
+	end
+	
+	return x
 end
 
 return self

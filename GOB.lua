@@ -32,6 +32,7 @@ local ffi = require("ffi")
 local cstdlib = require("CStdLib")
 local log = require("Log")
 local voc = require("VOC")
+local gmd = require("GMD")
 local byteStream = require("ByteStream")
 
 ffi.cdef[[
@@ -47,6 +48,10 @@ ffi.cdef[[
 	} __attribute((packed));
 ]]
 
+local gobFileType = ffi.typeof("struct GOBFile")
+local gobDirType = ffi.typeof("struct GOBFile[?]")
+local gobFileTypeSize = ffi.sizeof(gobFileType)
+	
 local self = {
 	gobs = {},
 	files = {},
@@ -96,9 +101,7 @@ function self.Open(name)
 	end
 	numFiles = numFiles[0]
 	
-	local gobFileType = ffi.typeof("struct GOBFile")
-	local gobDir = ffi.new("struct GOBFile[?]", numFiles)
-	local gobFileTypeSize = ffi.sizeof(gobFileType)
+	local gobDir = gobDirType(numFiles)
 	local numFilesRead = ffi.C.fread(gobDir, gobFileTypeSize, numFiles, fp)
 	
 	if (numFilesRead ~= numFiles) then
@@ -162,6 +165,8 @@ function self.Load(name, ...)
 	
 	if (file.type == "VOC") then
 		cache = voc.Load(name, stream)
+	elseif (file.type == "GMD") then
+		cache = gmd.Load(name, stream)
 	end
 
 	if (cache) then

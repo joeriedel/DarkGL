@@ -1,4 +1,4 @@
--- DarkGL Main Entry Point
+-- GMD file support
 --[[
 The MIT License (MIT)
 
@@ -23,70 +23,69 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ]]
 
-require("CStdLib") -- load ffi.C with stdlib
+local require = require
+local assert = assert
 
+module("GMD")
 local ffi = require("ffi")
-local ljgl = require("lujgl")
-local gl = ljgl.gl
-local glconst = ljgl.glconst
 local log = require("Log")
-local gob = require("GOB")
-local timers = require("Timers")
-local openal = require("OpenAL")
+local byteStream = require("ByteStream")
 local imuse = require("iMuse")
 
-log.Print("DarkGL starting...\n")
+ffi.cdef[[
+	struct GMDChunk {
+		char id[4]; // MIDI
+		int32_t size; // big endian
+	} __attribute((packed));
+	struct MThd {
+		int32_t format;
+		int32_t numTracks;
+		int32_t tempo;
+	};
+]]
 
-openal.Initialize()
-imuse.Initialize()
+local gmdChunkType = ffi.typeof("struct GMDChunk[?]")
+local mthdChunkType = ffi.typeof("struct MThd[?]")
 
---gob.Open("DARK.GOB")
-gob.Open("SOUNDS.GOB")
-
---[[for k,v in pairs(gob.files) do
-
-	if (v.type == "GMD") then
-		gob.Load(v.name)
-	end
-
-end]]
-
-local gmd = gob.Load("STALK-01.GMD")
-gmd:Play()
-
---local sound = gob.Load("WELD-2.VOC")
---sound:Play()
-
-ljgl.initialize("DarkGL", 1280, 720, {})
-
-function Render()
-	gl.glClear(bit.bor(glconst.GL_COLOR_BUFFER_BIT, glconst.GL_DEPTH_BUFFER_BIT))
+function ReadChunk(stream)
+	local chunk = stream:ffiRead(gmdChunkType)[0]
+	local id = ffi.string(chunk.id, 4)
+	chunk.size = byteStream.ByteSwap(chunk.size, 4)
+	return id, size
 end
 
-ljgl.setRenderCallback(Render)
+local self = {}
 
-local lastTickTime = nil
-function TickState()
-	if (lastTickTime == nil) then
-		lastTickTime = ljgl.getTime()
+function PlayGMD(gmd)
+	imuse.Play(gmd.stream.data)
+end
+
+function self.Load(name, stream)
+	local gmd = {}
+	gmd.New = function(x) return x end
+	gmd.stream = stream
+	gmd.Play = PlayGMD
+	return gmd
+	
+	--[[local id, size = ReadChunk(stream)
+	
+	if (id ~= "MIDI") then
+		log.Error("GMD does not have MIDI header!")
+		return nil
 	end
 	
-	local time = ljgl.getTime()
-	local dt = time - lastTickTime
-	lastTickTime = time
-	
-	if (dt > 0) then
-		timers.Tick(dt)
-	end
-	
+	local MThd = nil
+	while (not stream:EOF()) do
+		id, size = ReadChunk(stream)
+		if (id == "MThd") then
+			if (size ~= 6) then
+				log.Error("GMD malformed MThd chunk!")
+				return nil
+			end
+			MThd = stream:ffiRead(mthdChunkType)[0]
+			break
+		end
+	end]]--
 end
-ljgl.setIdleCallback(TickState)
 
-function Event(event,...)
-	print("Event", event, ...)
-end
-ljgl.setEventCallback(Event)
-
-ljgl.mainLoop()
-
-print("Done")
+return self

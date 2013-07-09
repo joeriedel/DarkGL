@@ -186,9 +186,4 @@ function self.Load(name, stream)
 	return sound.Create(voc)
 end
 
--- follow this up with collectgarbage() between levels
-function PurgeCache()
-	self.cache = {}
-end
-
 return self
