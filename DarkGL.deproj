@@ -10,6 +10,9 @@
     <filename>GLState.lua</filename>
   </file>
   <file>
+    <filename>GMD.lua</filename>
+  </file>
+  <file>
     <filename>GOB.lua</filename>
   </file>
   <file>
@@ -35,6 +38,9 @@
   </file>
   <file>
     <filename>VecLib.lua</filename>
+  </file>
+  <file>
+    <filename>iMuse.lua</filename>
   </file>
   <file>
     <filename>lujgl.lua</filename>
