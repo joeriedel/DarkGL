@@ -51,11 +51,11 @@ gob.Open("SOUNDS.GOB")
 
 end]]
 
-local gmd = gob.Load("STALK-01.GMD")
-gmd:Play()
-
 --local sound = gob.Load("WELD-2.VOC")
 --sound:Play()
+
+imuse.PlaySong("01")
+
 
 ljgl.initialize("DarkGL", 1280, 720, {})
 
@@ -82,8 +82,26 @@ function TickState()
 end
 ljgl.setIdleCallback(TickState)
 
+local mode = 0
+
 function Event(event,...)
-	print("Event", event, ...)
+	
+--	print("Event", event, ...)
+	if (event == "key") then
+		local key, scancode, pressed, rep = ...
+		if (pressed and not rep) then
+			if (mode == 0) then
+				log.Print("triggering fight\n")
+				imuse.Fight()
+				mode = 1
+			else
+				log.Print("triggering stalk\n")
+				imuse.Stalk()
+				mode = 0
+			end
+		end
+	end
+	
 end
 ljgl.setEventCallback(Event)
 

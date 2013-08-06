@@ -27,25 +27,42 @@ local require = require
 
 module("iMuse")
 local ffi = require("ffi")
-
+local gob = require("GOB")
+ 
 ffi.cdef[[
-	typedef void* (*MIDIHOOK) (const char *args);
 	void darkgl_scumm_init();
-	void darkgl_scumm_set_midi_hook(MIDIHOOK hook);
-	void darkgl_scumm_midi_start(const void *sound);
+	void darkgl_scumm_midi_start(const void *stalk, const void  *fight);
 	void darkgl_scumm_midi_stop();
+	void darkgl_set_transition(int);
 ]]
 
 local imuse = ffi.load("scummvm")
 
 local self = {}
+local stalk = nil
+local fight = nil
 
 function self.Initialize()
 	imuse.darkgl_scumm_init()
 end
 
-function self.Play(gmdfile)
-	imuse.darkgl_scumm_midi_start(gmdfile)
+function self.PlaySong(songnumber)
+	self:Stop()
+	
+	stalk = gob.Load("STALK-"..songnumber..".GMD")
+	fight = gob.Load("FIGHT-"..songnumber..".GMD")
+	
+	if (stalk and fight) then
+		imuse.darkgl_scumm_midi_start(stalk.stream.data, fight.stream.data)
+	end
+end
+
+function self.Stalk()
+	imuse.darkgl_set_transition(0)
+end
+
+function self.Fight()
+	imuse.darkgl_set_transition(1)
 end
 
 function self.Stop()

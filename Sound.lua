@@ -89,6 +89,7 @@ function QueueNextBuffer(sound, instance)
 				
 				-- bufferI is ready
 				openal.C.alSourceQueueBuffers(instance.source[0], 1, instance.buffer.id + instance.bufferI)
+				openal.C.alSourcePlay(instance.source[0])
 				instance.numQueued = instance.numQueued + 1
 				instance.bufferI = instance.bufferI + 1
 				if (instance.bufferI == instance.buffer.num) then
@@ -114,6 +115,7 @@ function QueueNextBuffer(sound, instance)
 	instance.nextBuffer = instance.nextBuffer + 1
 
 	openal.C.alSourceQueueBuffers(instance.source[0], 1, instance.buffer.id)
+	openal.C.alSourcePlay(instance.source[0])
 	instance.bufferI = 1
 	instance.numQueued = instance.numQueued + 1
 	
@@ -190,8 +192,6 @@ function PlaySound(sound)
 	sound.numPlaying = sound.numPlaying + 1
 	
 	TickInstance(sound, instance)
-	
-	openal.C.alSourcePlay(instance.source[0])
 	
 	if (sound.timer == nil) then
 		local f = function(dt)

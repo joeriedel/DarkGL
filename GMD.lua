@@ -30,7 +30,6 @@ module("GMD")
 local ffi = require("ffi")
 local log = require("Log")
 local byteStream = require("ByteStream")
-local imuse = require("iMuse")
 
 ffi.cdef[[
 	struct GMDChunk {
@@ -56,36 +55,11 @@ end
 
 local self = {}
 
-function PlayGMD(gmd)
-	imuse.Play(gmd.stream.data)
-end
-
 function self.Load(name, stream)
 	local gmd = {}
 	gmd.New = function(x) return x end
 	gmd.stream = stream
-	gmd.Play = PlayGMD
 	return gmd
-	
-	--[[local id, size = ReadChunk(stream)
-	
-	if (id ~= "MIDI") then
-		log.Error("GMD does not have MIDI header!")
-		return nil
-	end
-	
-	local MThd = nil
-	while (not stream:EOF()) do
-		id, size = ReadChunk(stream)
-		if (id == "MThd") then
-			if (size ~= 6) then
-				log.Error("GMD malformed MThd chunk!")
-				return nil
-			end
-			MThd = stream:ffiRead(mthdChunkType)[0]
-			break
-		end
-	end]]--
 end
 
 return self

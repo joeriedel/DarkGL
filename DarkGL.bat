@@ -1,2 +1,2 @@
-.\Win32\luajit.exe Main.lua
+Win32\luajit.exe Main.lua
 pause

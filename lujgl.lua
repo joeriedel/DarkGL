@@ -62,7 +62,7 @@ local bit = require "bit"
 local max = math.max
 local gl, glconst, glu, glfw, glfwconst
 
-local int_buffer = ffi.new("int[2]")
+local double_buffer = ffi.new("double[2]")
 
 local LuJGL = {}
 LuJGL.frameCount = 0
@@ -3242,12 +3242,12 @@ end
 local function create_callback(func)
 	-- Work around for this:
 	-- http://lua-users.org/lists/lua-l/2011-12/msg00712.html
-	jit.off(func)
+	--jit.off(func)
 	return func
 end
 
 local function call_callback(func,...)
-	if not func then return true end
+    if not func then return true end
 	local ok, msg = xpcall(func,xpcall_traceback_hook,...)
 	if not ok then
 		stop = true
@@ -3301,16 +3301,23 @@ function LuJGL.initialize(name, w, h, hints)
 	LuJGL.width = size_buffer[0]
 	LuJGL.height = size_buffer[1]
 	
-	glfw.glfwSetKeyCallback(LuJGL.window, create_callback(function(window, key, down)
+	glfw.glfwSetKeyCallback(LuJGL.window, create_callback(function(window, key, scancode, action, mod)
 		if key <= 255 then
 			key = string.char(key):lower()
 		end
-		call_callback(event_cb, "key", down ~= 0, key)
+		call_callback(
+			event_cb, 
+			"key", 
+			key, 
+			scancode, 
+			(action == glfwconst.GLFW_PRESS) or (action == glfwconst.GLFW_REPEAT),
+			(action == glfwconst.GLFW_REPEAT)
+		)
 	end))
 	
-	glfw.glfwSetMouseButtonCallback(LuJGL.window, create_callback(function(window, button, action)
-		glfw.glfwGetCursorPos(LuJGL.window, int_buffer,int_buffer+1)
-		call_callback(event_cb, "mouse", button, action ~= 0, int_buffer[0], int_buffer[1])
+	glfw.glfwSetMouseButtonCallback(LuJGL.window, create_callback(function(window, button, action, mods)
+		glfw.glfwGetCursorPos(LuJGL.window, double_buffer,double_buffer+1)
+		call_callback(event_cb, "mouse", button, action ~= 0, double_buffer[0], double_buffer[1])
 	end))
 	
 	glfw.glfwSetCursorPosCallback(LuJGL.window, create_callback(function(window, x,y)
@@ -3359,7 +3366,7 @@ function LuJGL.mainLoop()
 	glfw.glfwSetTime(0)
 	LuJGL.frameCount = 0
 	while (not stop) and (glfw.glfwWindowShouldClose(LuJGL.window) == 0) do
-		glfw.glfwPollEvents()
+		glfw.glfwWaitEvents()
 		call_callback(idle_cb)
 		call_callback(render_cb)
 		glfw.glfwSwapBuffers(LuJGL.window)
